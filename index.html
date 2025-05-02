@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Saaragya Chat</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -81,23 +83,11 @@
       background-color: #f1f5f9;
       align-self: flex-start;
     }
-    .admin-login {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      font-size: 12px;
-      color: white;
-      cursor: pointer;
-      text-decoration: underline;
-    }
   </style>
 </head>
 <body>
   <div class="chat-container">
-    <div class="chat-header">
-      Saaragya Support
-      <span class="admin-login" onclick="adminLogin()">Admin Login</span>
-    </div>
+    <div class="chat-header">Saaragya Support</div>
     <div class="chat-messages" id="chatMessages"></div>
     <form class="chat-input" id="chatForm">
       <input type="text" id="messageInput" placeholder="Type a message..." required />
@@ -106,6 +96,23 @@
   </div>
 
   <script>
+    // 🔐 Replace with your own Firebase config
+   // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyB99jwYhU1aeO9kTNmrEqoGz-D2Ix1xMKY",
+  authDomain: "wa-chatbot-4f454.firebaseapp.com",
+  projectId: "wa-chatbot-4f454",
+  storageBucket: "wa-chatbot-4f454.firebasestorage.app",
+  messagingSenderId: "799439602770",
+  appId: "1:799439602770:web:ce723ca66447db2e240b8b",
+  measurementId: "G-B7E31P44G2"
+};
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const chatId = "default-room"; // for now a single global room
+    const chatRef = db.collection("chats").doc(chatId).collection("messages");
+
     const chatForm = document.getElementById('chatForm');
     const messageInput = document.getElementById('messageInput');
     const chatMessages = document.getElementById('chatMessages');
@@ -125,26 +132,21 @@
       appendMessage(message, 'outgoing');
       messageInput.value = '';
 
-      // Simulate message send to Firebase here
-      // await sendMessageToFirebase(message);
+      await chatRef.add({
+        text: message,
+        type: 'outgoing',
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
     });
 
-    // Simulated incoming message polling (every 10 seconds)
-    setInterval(() => {
-      if (Math.random() < 0.25) { // simulate a 25% chance of receiving
-        appendMessage("This is a simulated reply.", 'incoming');
-      }
-    }, 10000);
-
-    function adminLogin() {
-      const password = prompt("Enter admin password:");
-      if (password === "saaragya123") {
-        alert("Admin login successful. (Future: redirect to dashboard)");
-        // redirect or show admin tools here
-      } else {
-        alert("Incorrect password.");
-      }
-    }
+    chatRef.orderBy('timestamp')
+      .onSnapshot(snapshot => {
+        chatMessages.innerHTML = '';
+        snapshot.forEach(doc => {
+          const msg = doc.data();
+          appendMessage(msg.text, msg.type);
+        });
+      });
   </script>
 </body>
 </html>
